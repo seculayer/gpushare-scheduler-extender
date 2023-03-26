@@ -1,0 +1,29 @@
+# Default values for gpushare-installer.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+masterCount: 3
+
+images:
+   extender:
+      image: "registry.cn-beijing.aliyuncs.com/acs/k8s-gpushare-schd-extender"
+      tag: v1.0.0-ce6f800-aliyun
+      pullPolicy: IfNotPresent
+   installer:
+      image: "registry.cn-beijing.aliyuncs.com/acs/schd-extender-deployer"
+      tag: v1.0.0-b56d26d-aliyun
+      pullPolicy: IfNotPresent
+   devicePlugin:
+      image: "registry.cn-beijing.aliyuncs.com/acs/k8s-gpushare-plugin"
+      tag: v1.0.0-2656995-aliyun
+      pullPolicy: IfNotPresent
+   evictor:
+      image: "registry.cn-beijing.aliyuncs.com/acs/nvidia-device-plugin-evict"
+      tag: v1.0.0-b56d26d-aliyun
+      pullPolicy: IfNotPresent
+   recover:
+      image: "registry.cn-beijing.aliyuncs.com/acs/nvidia-device-plugin-recover"
+      tag: v1.0.0-b56d26d-aliyun
+      pullPolicy: IfNotPresent
+
+

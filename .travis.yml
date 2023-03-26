@@ -1,9 +1,9 @@
 language: go
 
 go:
-  - "1.14"
+  - "1.10"
 
-go_import_path: gpushare-scheduler-extender
+go_import_path: github.com/seculayer/gpushare-scheduler-extender
 
 # let us have speedy Docker-based Travis workers
 sudo: false

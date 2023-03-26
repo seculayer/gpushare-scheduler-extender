@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpushare-installer
+  namespace: kube-system
+  labels:
+    app: gpushare
+    name: gpushare-installer
+    chart: {{ template "gpushare-installer.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  parallelism: {{ .Values.masterCount }}
+  template:
+    metadata:
+      labels: 
+        chart: {{ template "gpushare-installer.chart" . }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+        app: gpushare
+        name: gpushare-installer
+    spec:
+      hostNetwork: true
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+        key: node-role.kubernetes.io/master
+      - effect: NoSchedule
+        operator: Exists
+        key: node.cloudprovider.kubernetes.io/uninitialized
+      nodeSelector:
+         node-role.kubernetes.io/master: ""
+      restartPolicy: OnFailure
+      containers:
+      - name: deploy-schd
+        image: "{{ .Values.images.installer.image }}:{{ .Values.images.installer.tag }}"
+        imagePullPolicy: {{ .Values.images.installer.pullPolicy }}
+        securityContext:
+          privileged: true
+        command: 
+          - bash
+          - /schd-extender/install-sched-extender-on-host.sh
+        env:
+          - name: NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        volumeMounts:
+        - name: kube-dir
+          mountPath: /etc/kubernetes
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes
+          type: Directory
+        name: kube-dir
+
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: name
+                    operator: In
+                    values:
+                       - gpushare-installer
+              topologyKey: "kubernetes.io/hostname"

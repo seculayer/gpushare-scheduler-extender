@@ -1,10 +1,10 @@
 package cache
 
 import (
-	"log"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/log"
 	"sync"
 
-	"eyecloudai/gpushare-scheduler-extender/pkg/utils"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/utils"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,7 +47,7 @@ func (cache *SchedulerCache) GetNodeinfos() []*NodeInfo {
 
 // build cache when initializing
 func (cache *SchedulerCache) BuildCache() error {
-	log.Println("debug: begin to build scheduler cache")
+	log.V(5).Info("debug: begin to build scheduler cache")
 	pods, err := cache.podLister.List(labels.Everything())
 
 	if err != nil {
@@ -87,10 +87,10 @@ func (cache *SchedulerCache) KnownPod(podUID types.UID) bool {
 }
 
 func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
-	log.Printf("debug: Add or update pod info: %v", pod)
-	log.Printf("debug: Node %v", cache.nodes)
+	log.V(100).Info("debug: Add or update pod info: %v", pod)
+	log.V(100).Info("debug: Node %v", cache.nodes)
 	if len(pod.Spec.NodeName) == 0 {
-		log.Printf("debug: pod %s in ns %s is not assigned to any node, skip", pod.Name, pod.Namespace)
+		log.V(100).Info("debug: pod %s in ns %s is not assigned to any node, skip", pod.Name, pod.Namespace)
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 		// put it into known pod
 		cache.rememberPod(pod.UID, podCopy)
 	} else {
-		log.Printf("debug: pod %s in ns %s's gpu id is %d, it's illegal, skip",
+		log.V(100).Info("debug: pod %s in ns %s's gpu id is %d, it's illegal, skip",
 			pod.Name,
 			pod.Namespace,
 			utils.GetGPUIDFromAnnotation(pod))
@@ -114,13 +114,13 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 
 // The lock is in cacheNode
 func (cache *SchedulerCache) RemovePod(pod *v1.Pod) {
-	log.Printf("debug: Remove pod info: %v", pod)
-	log.Printf("debug: Node %v", cache.nodes)
+	log.V(100).Info("debug: Remove pod info: %v", pod)
+	log.V(100).Info("debug: Node %v", cache.nodes)
 	n, err := cache.GetNodeInfo(pod.Spec.NodeName)
 	if err == nil {
 		n.removePod(pod)
 	} else {
-		log.Printf("debug: Failed to get node %s due to %v", pod.Spec.NodeName, err)
+		log.V(10).Info("debug: Failed to get node %s due to %v", pod.Spec.NodeName, err)
 	}
 
 	cache.forgetPod(pod.UID)
@@ -142,21 +142,24 @@ func (cache *SchedulerCache) GetNodeInfo(name string) (*NodeInfo, error) {
 		cache.nodes[name] = n
 	} else {
 		// if the existing node turn from non gpushare to gpushare
-		if (utils.GetTotalGPUMemory(n.node) <= 0 && utils.GetTotalGPUMemory(node) > 0) ||
-			(utils.GetGPUCountInNode(n.node) <= 0 && utils.GetGPUCountInNode(node) > 0) ||
-			// if the existing node turn from gpushare to non gpushare
-			(utils.GetTotalGPUMemory(n.node) > 0 && utils.GetTotalGPUMemory(node) <= 0) ||
-			(utils.GetGPUCountInNode(n.node) > 0 && utils.GetGPUCountInNode(node) <= 0) {
-			log.Printf("debug: GetNodeInfo() need update node %s from %v to %v",
-				name,
-				n.node,
-				node)
-			cache.nodes[name].node = node
-			log.Printf("debug: node: %s, labels from cache after been updated: %v", n.node.Name, n.node.Labels)
-		} else {
-			log.Printf("debug: GetNodeInfo() uses the existing nodeInfo for %s", name)
-		}
+		// if (utils.GetTotalGPUMemory(n.node) <= 0 && utils.GetTotalGPUMemory(node) > 0) ||
+		// 	(utils.GetGPUCountInNode(n.node) <= 0 && utils.GetGPUCountInNode(node) > 0) ||
+		// 	// if the existing node turn from gpushare to non gpushare
+		// 	(utils.GetTotalGPUMemory(n.node) > 0 && utils.GetTotalGPUMemory(node) <= 0) ||
+		// 	(utils.GetGPUCountInNode(n.node) > 0 && utils.GetGPUCountInNode(node) <= 0) {
+		if len(cache.nodes[name].devs) == 0 ||
+			utils.GetTotalGPUMemory(n.node) <= 0 ||
+			utils.GetGPUCountInNode(n.node) <= 0 {
+			log.V(10).Info("info: GetNodeInfo() need update node %s",
+				name)
 
+			// fix the scenario that the number of devices changes from 0 to an positive number
+			cache.nodes[name].Reset(node)
+			log.V(10).Info("info: node: %s, labels from cache after been updated: %v", n.node.Name, n.node.Labels)
+		} else {
+			log.V(10).Info("info: GetNodeInfo() uses the existing nodeInfo for %s", name)
+		}
+		log.V(100).Info("debug: node %s with devices %v", name, n.devs)
 	}
 	return n, nil
 }

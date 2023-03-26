@@ -1,12 +1,12 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/log"
+	v1 "k8s.io/api/core/v1"
 	"strconv"
 	"time"
-
-	"k8s.io/api/core/v1"
 )
 
 // AssignedNonTerminatedPod selects pods that are assigned and non-terminal (scheduled and running).
@@ -50,7 +50,7 @@ func GetGPUIDFromAnnotation(pod *v1.Pod) int {
 			var err error
 			id, err = strconv.Atoi(value)
 			if err != nil {
-				log.Printf("warn: Failed due to %v for pod %s in ns %s", err, pod.Name, pod.Namespace)
+				log.V(9).Info("warn: Failed due to %v for pod %s in ns %s", err, pod.Name, pod.Namespace)
 				id = -1
 			}
 		}
@@ -80,7 +80,7 @@ loop:
 		if env.Name == EnvResourceIndex {
 			devIdx, err = strconv.Atoi(env.Value)
 			if err != nil {
-				log.Printf("warn: Failed due to %v for %s", err, container.Name)
+				log.V(9).Info("warn: Failed due to %v for %s", err, container.Name)
 				devIdx = -1
 			}
 			break loop
@@ -104,7 +104,7 @@ func GetGPUMemoryFromPodAnnotation(pod *v1.Pod) (gpuMemory uint) {
 		}
 	}
 
-	log.Printf("debug: pod %s in ns %s with status %v has GPU Mem %d",
+	log.V(100).Info("debug: pod %s in ns %s with status %v has GPU Mem %d",
 		pod.Name,
 		pod.Namespace,
 		pod.Status.Phase,
@@ -117,7 +117,7 @@ func GetGPUMemoryFromPodEnv(pod *v1.Pod) (gpuMemory uint) {
 	for _, container := range pod.Spec.Containers {
 		gpuMemory += getGPUMemoryFromContainerEnv(container)
 	}
-	log.Printf("debug: pod %s in ns %s with status %v has GPU Mem %d",
+	log.V(100).Info("debug: pod %s in ns %s with status %v has GPU Mem %d",
 		pod.Name,
 		pod.Namespace,
 		pod.Status.Phase,
@@ -203,4 +203,17 @@ func GetUpdatedPodAnnotationSpec(oldPod *v1.Pod, devId int, totalGPUMemByDev int
 	newPod.ObjectMeta.Annotations[EnvResourceAssumeTime] = fmt.Sprintf("%d", now.UnixNano())
 
 	return newPod
+}
+
+func PatchPodAnnotationSpec(oldPod *v1.Pod, devId int, totalGPUMemByDev int) ([]byte, error) {
+	now := time.Now()
+	patchAnnotations := map[string]interface{}{
+		"metadata": map[string]map[string]string{"annotations": {
+			EnvResourceIndex:      fmt.Sprintf("%d", devId),
+			EnvResourceByDev:      fmt.Sprintf("%d", totalGPUMemByDev),
+			EnvResourceByPod:      fmt.Sprintf("%d", GetGPUMemoryFromPodResource(oldPod)),
+			EnvAssignedFlag:       "false",
+			EnvResourceAssumeTime: fmt.Sprintf("%d", now.UnixNano()),
+		}}}
+	return json.Marshal(patchAnnotations)
 }

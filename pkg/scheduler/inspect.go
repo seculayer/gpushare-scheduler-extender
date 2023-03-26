@@ -1,8 +1,8 @@
 package scheduler
 
 import (
-	"eyecloudai/gpushare-scheduler-extender/pkg/cache"
-	"eyecloudai/gpushare-scheduler-extender/pkg/utils"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/cache"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/utils"
 )
 
 func (in Inspect) Handler(name string) *Result {

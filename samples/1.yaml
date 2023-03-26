@@ -21,9 +21,9 @@ spec:
     spec:
       containers:
       - name: binpack-1
-        image: test:1.0.0
+        image: cheyang/gpu-player:v2
         resources:
           limits:
             # GiB
-#            nvidia.com/gpu-mem: 2
-            nvidia.com/gpu-mem: 2
+            aliyun.com/gpu-mem: 2
+

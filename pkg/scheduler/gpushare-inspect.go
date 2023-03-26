@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"eyecloudai/gpushare-scheduler-extender/pkg/cache"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/cache"
 )
 
 func NewGPUShareInspect(c *cache.SchedulerCache) *Inspect {

@@ -5,7 +5,6 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import os
 
 import tensorflow as tf
 
@@ -28,8 +27,6 @@ def train(fraction=1.0):
 
 
 if __name__ == '__main__':
-
-	print(os.environ)
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--total', type=float, default=1000,
                       help='Total GPU memory.')
@@ -39,5 +36,5 @@ if __name__ == '__main__':
 	# fraction = FLAGS.allocated / FLAGS.total * 0.85
 	fraction = round( FLAGS.allocated * 0.7 / FLAGS.total , 1 )
 
-	print("memory fraction : {}".format(fraction))
+	print(fraction)
 	train(fraction)

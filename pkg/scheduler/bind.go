@@ -1,9 +1,9 @@
 package scheduler
 
 import (
-	"eyecloudai/gpushare-scheduler-extender/pkg/cache"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/cache"
 	"k8s.io/apimachinery/pkg/types"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "k8s.io/kube-scheduler/extender/v1"
 )
 
 // Bind is responsible for binding node and pod

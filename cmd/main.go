@@ -1,19 +1,20 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"log"
-
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/log"
+	"net/http"
 	"os"
+	"runtime"
 	"strconv"
-	"strings"
+	"time"
 
-	"github.com/comail/colog"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/gpushare"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/routes"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/scheduler"
+	"github.com/seculayer/gpushare-scheduler-extender/pkg/utils/signals"
 	"github.com/julienschmidt/httprouter"
-	"gpushare-scheduler-extender/pkg/gpushare"
-	"gpushare-scheduler-extender/pkg/routes"
-	"gpushare-scheduler-extender/pkg/scheduler"
-	"gpushare-scheduler-extender/pkg/utils/signals"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -39,30 +40,35 @@ func initKubeClient() {
 	// Get kubernetes config.
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %s", err.Error())
+		log.Fatal("Error building kubeconfig: %s", err.Error())
 	}
 
 	// create the clientset
 	clientset, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		log.Fatalf("fatal: Failed to init rest config due to %v", err)
+		log.Fatal("fatal: Failed to init rest config due to %v", err)
 	}
 }
 
 func main() {
+
 	// Call Parse() to avoid noisy logs
 	flag.CommandLine.Parse([]string{})
+	ctx := context.Background()
 
-	colog.SetDefaultLevel(colog.LInfo)
-	colog.SetMinLevel(colog.LInfo)
-	colog.SetFormatter(&colog.StdFormatter{
-		Colors: true,
-		Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-	})
-	colog.Register()
-	level := StringToLevel(os.Getenv("LOG_LEVEL"))
-	log.Print("Log level was set to ", strings.ToUpper(level.String()))
-	colog.SetMinLevel(level)
+	var logLevel int32 = 10
+	switch os.Getenv("LOG_LEVEL") {
+	case "debug":
+		logLevel = 101
+	case "info":
+		logLevel = 50
+	case "warn":
+		logLevel = 10
+	case "error":
+		logLevel = 5
+	}
+	log.NewLoggerWithLevel(logLevel)
+
 	threadness := StringToInt(os.Getenv("THREADNESS"))
 
 	initKubeClient()
@@ -77,17 +83,17 @@ func main() {
 	informerFactory := kubeinformers.NewSharedInformerFactory(clientset, resyncPeriod)
 	controller, err := gpushare.NewController(clientset, informerFactory, stopCh)
 	if err != nil {
-		log.Fatalf("Failed to start due to %v", err)
+		log.Fatal("Failed to start due to %v", err)
 	}
 	err = controller.BuildCache()
 	if err != nil {
-		log.Fatalf("Failed to start due to %v", err)
+		log.Fatal("Failed to start due to %v", err)
 	}
 
 	go controller.Run(threadness, stopCh)
 
 	gpusharePredicate := scheduler.NewGPUsharePredicate(clientset, controller.GetSchedulerCache())
-	gpushareBind := scheduler.NewGPUShareBind(clientset, controller.GetSchedulerCache())
+	gpushareBind := scheduler.NewGPUShareBind(ctx, clientset, controller.GetSchedulerCache())
 	gpushareInspect := scheduler.NewGPUShareInspect(controller.GetSchedulerCache())
 
 	router := httprouter.New()
@@ -98,34 +104,16 @@ func main() {
 	routes.AddBind(router, gpushareBind)
 	routes.AddInspect(router, gpushareInspect)
 
-	log.Printf("info: server starting on the port :%s", port)
+	log.V(3).Info("server starting on the port :%s", port)
 	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func StringToLevel(levelStr string) colog.Level {
-	switch level := strings.ToUpper(levelStr); level {
-	case "TRACE":
-		return colog.LTrace
-	case "DEBUG":
-		return colog.LDebug
-	case "INFO":
-		return colog.LInfo
-	case "WARNING":
-		return colog.LWarning
-	case "ERROR":
-		return colog.LError
-	case "ALERT":
-		return colog.LAlert
-	default:
-		log.Printf("warning: LOG_LEVEL=\"%s\" is empty or invalid, fallling back to \"INFO\".\n", level)
-		return colog.LInfo
+		log.Fatal("server listen fail %+v", err)
 	}
 }
 
 func StringToInt(sThread string) int {
-	thread := 1
-
+	thread := runtime.NumCPU()
+	if threadInt, err := strconv.Atoi(sThread); err == nil {
+		thread = threadInt
+	}
 	return thread
 }
