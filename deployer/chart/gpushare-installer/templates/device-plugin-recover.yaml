@@ -27,7 +27,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: aliyun.accelerator/nvidia_count
+              - key: nvidia.accelerator/nvidia_count
                 operator: Exists
       # nodeSelector:
       #   gpu-instance: "true"
