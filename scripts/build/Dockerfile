@@ -1,6 +1,6 @@
 FROM golang:1.19-alpine as build
 
-WORKDIR /go/src/github.com/eyecloudai/gpushare-scheduler-extender
+WORKDIR /go/src/github.com/seculayer/gpushare-scheduler-extender
 COPY . .
 
 RUN go build -o /go/bin/gpushare-sche-extender cmd/*.go

@@ -1,8 +1,8 @@
 package utils
 
 const (
-	ResourceName = "nvidia.com/gpu-mem"
-	CountName    = "nvidia.com/gpu-count"
+	ResourceName = "seculayer.com/gpu-mem"
+	CountName    = "seculayer.com/gpu-count"
 
 	EnvNVGPU              = "NVIDIA_VISIBLE_DEVICES"
 	EnvResourceIndex      = "NVIDIA_COM_GPU_MEM_IDX"

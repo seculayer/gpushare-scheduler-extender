@@ -8,7 +8,7 @@ ifeq ($(shell uname -p),arm)
 endif
 
 # Definitions
-IMAGE                   := registry.seculayer.com/eyecloudai/gpushare-scheduler-extender
+IMAGE                   := registry.seculayer.com:31500/eyecloudai/gpushare-scheduler-extender
 GIT_VERSION             := 2.0
 COMMIT_ID 				:= $(shell git describe --match=NeVeRmAtCh --abbrev=99 --tags --always --dirty)
 GOLANG_DOCKER_IMAGE     := golang:1.19
